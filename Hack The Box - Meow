@@ -1,0 +1,325 @@
+Hack The Box - Meow
+
+My first owned machine on Hack The Box
+
+Overview
+
+Meow is a beginner-friendly machine from Hack The Box's Starting point series. It provides an introduction to fundamentasl penetration-testing concepts such as:
+* Network reconnaissance
+* Port scanning
+* Service enumeration
+* FTP
+* Anonymous authentication
+* Remote access
+* Privilege awareness
+* Flag retrieval
+
+This machine was particilarly valuable because it allowed me to take concepts I had learned theoreticallynand apply them in a practical penetration-testing environment.
+
+Objectives
+
+The main objectives of this lab were to:
+1. Identify the target machine.
+2. Perform networking reconnaissance.
+3. Discover open ports.
+4. Identify the services running on those ports.
+5. Enumerate the discovered services.
+6. Identify a potential attack vector.
+7. Gain access to the target system.
+8. Locate the reuired flag
+9. Document the methodology and lessons learned.
+
+Methodology
+I followed a structured penetration-testing methodology:
+                Reconnaissence
+                     |
+                Port scanning
+                     |
+            Service enumeration
+                     |
+ Vulnerability/ Misconfiguration identification
+                     |
+               Initial access
+                     |
+        Post-exploitation enumeration
+                     |
+               Flag retrieval
+                     |
+               Documentation
+
+The most important lesson from this machine was that enumeration should come before exploitation.
+
+1. Reconnaissance
+The first step was understanding the target environment.
+
+Once the Hack The Box VPN connection was established and the target machine was started. I obtained the target IP address provided by the platform.
+
+For this write-up, I will refer to it as:    <TARGET_IP>
+
+I avoided making assumptions about the target and began with basic network reconnaissance.
+
+Initial questions
+
+I wanted to determine:
+
+* Is the host reachable?
+* Which ports are open?
+* What services are runnung?
+* What versions of those services are being used?
+* Is there an obvious misconfiguration?
+
+2. Port Scanning with Nmap
+
+I used Nmap to perform an initial scan of the target.
+
+nmap <TARGET_IP>
+
+The purpose of this scan was to identify open TCP ports.
+
+Why Nmap?
+
+Nmap is commonly used during reconnaissance because it can identify:
+* Open ports
+* Closed ports
+* Filtered ports
+* Services
+* Service versions
+* Operating-system information
+
+The initial scan revealed an accessible service that required further investigation.
+
+3. Service Enumeration
+
+After identifying an open port, the next step was determining exactly what service was running.
+
+I performed service/version detection: nmap -sV <TARGET_IP> 
+The -sV option instructs Nmap to attempt to determine the service and version running on discovered ports.
+
+Findings
+
+The scan identified:
+
+Port = 23
+Service = Telnet
+Significance = Potential remote-access service
+
+The presence of Talnet immediately became an important finding.
+
+4. Understanding Telnet
+
+Telnet is a protocol used for remote access to systems.
+However, Telnet is considered insecure because it does not provide the same level of encryption expected frommodern remote-access protocols such as SSH.
+
+From a penetration-testing perspective, discovering Telnet means I should investigate:
+* Whether authentication is required
+* Whether default credentials exist
+* Whether the service has known vulnerabilities
+* Whether anonymous access is possible
+* Whether weak credentials are being used
+* Whether the service exposes a direct route to the system
+
+Instead of immediately attempting exploitation, I continued with enumeration.
+
+5. Connecting to the Service
+
+I attempted to connect to the Telnet service, using the appropriate client:   telnet <TARGET_IP>
+The connection was successful.
+
+This was a significant discovery because it indicated that the service was accessible remotely.
+
+6. Authentication Investigation
+
+I investigated the authentication mechanism presented by the Telnet service.
+The goal was to determine whether the machine was using:
+* Valid credentials
+* Default credentials
+* Weak credentials
+* Misconfigured authentication
+
+During the investigation, I identified credentials that allowed access to the target.
+
+7. Initial Access
+Using the discovered authentication information, I successfully authenticated to the target through Telnet.
+
+This represented my initial access.
+
+The process is summarized as:
+              Target IP
+                 |
+              Nmap scan
+                 |
+        Port 23 discovered
+                 |
+        Telnet identified
+                 |
+       Telnet enumeration
+                 |
+Authentication information identified
+                 |
+           Remote login
+                 |
+     Initial access achieved
+
+8. Post-exploitation Enumeration
+
+Once access was obtained, I switched from external reconnaissance to internal enumeration.
+
+The purpose was to understand:
+* Which I was logged in as
+* What priveleges the account had
+* What files were accessible
+* What directories existed
+* Whether the account had elevated privileges
+* Where the challenge objective could be located
+
+I began by identifying the current user:    whoami
+I then examined the current working directory:   pwd 
+And listed available files and directories:     ls
+For more detailed information:     ls -la
+
+9. Understanding My Privileges
+
+Determining the current user's privileges is an important part of post-exploitation enumeration.
+I checked the current user's identity and group membership:   id
+
+This helps determine:
+* User ID
+* Group ID
+* Group memberships
+* Potential administrative privileges
+
+10. Locating the Flag
+
+With access established, I searched the accessible directories for the challenge flag.
+I first inspected the current directory:    ls -la
+
+I then examined relevant files using:       cat<filename>
+
+The flag was successfully located.
+
+Tools Used
+
+Tool            |Purpose
+Nmap            |Network reconnaissance and port scannin
+Telnet          |Remove connection to the target
+Linux CLI       |Post-exploitation enumeration
+hack The Box    |Controlled penetration-testing environment
+
+Commands Used
+
+* Basic port scan: nmap<TARGET_IP>
+* Service/version detection: nmap -sV <TARGET_IP>
+* Connect to Telnet: telnet <TARGET_IP>
+* Identtify current user: whoami
+* Display current directory: pwd
+* List files: ls
+* Display hidden files: ls -la
+* Display user/group information: id
+* Read a file: cat<filename>
+
+Key Findings
+
+* Telnet exposed
+Port: 23/TCP
+The target exposed a Telnet service.
+
+Security implication - Telnet is an outdated remote-access protocol and should be replaced with a secure alternative such as SSH.
+
+* Weak/Misconfigured Authentication
+The service allowed authentication using credentials discovered during enumeration.
+
+Security implication - Weak or improperly protected credentials can provide attackers with direct access to systems.
+
+* Excessive Remote Accessibility
+A remotely accessible administrative service increased the attack surface of the host.
+
+Security implication - Services that do not need to be exposed remotely should be restricted through:
+- Firewall rules
+- Network segmentation
+- Access-control lists
+- VPN access
+- Security groups
+
+Security Recommendations
+
+1. Disable Telnet - Telnet should be removed and replaced with SSH.
+
+2. Enforce Strong Authentication - Organizations should implement:
+* Strong passwords
+* Unique credentials
+* Multi-factor authentication
+* Password rotation policies
+
+3. Restrict Remote Access - Remote administrative services should not be unnecessarily exposed to untrusted networks.
+Access should be restricted using:
+* Firewalls
+* VPNs
+* Network segmentation
+* IP allowlists
+* Zero-trust access controls
+
+4. Monitor Authentication Attemps - Security teams should monitor authentication logs for:
+* Repeated failed logins
+* Successful logins from unusual locations
+* Unexpected administrative access
+* Suspicious login times
+
+What I have learned
+
+This machine taught me several important lessons.
+
+1. Enumeration is crucial.
+The biggest lesson was that successful pen-testing is not simply about running exploitation tools. Understanding what is exposed by the target is often more important.
+
+2. Every open port matters
+An open port represents a potential attack surface. The discovery of port 23 immediately gave me a direction for further investigation.
+
+3. Service identification helps determine the attack path
+Knowing that the target was running Telnet allowed me to focus my investigation on the service and its authentication mechanism.
+
+4. Post-exploitation enumeration matters
+Obtaining access is only part of the process. After gaining access, I needed to understand:
+* Who am i?
+* What can I access?
+* What privilege do I have?
+* What information is available?
+
+5. Methodology matters more than memorizing commmands
+The machine reinforced a simple methodology:
+Scan - Enumerate - Understand - Access - Enumerate - Document
+I learned to ask why each step was necessary, rather than blindly executing commands.
+
+Achievement
+
+First Hack The Box Machine Owned!
+
+Completing Meow was a major achievement in my cybersecurity learning journey.
+
+It was my first opportunity to work through a complete attack path in a controlled environment, from reconnaissance through initial access and post-exploitation enumeration.
+
+This experience has motivated me to continue working through more Hack The Box and TryHackMe machines and to document my progress as I build my cybersecurity portfolio.
+
+Skills Demonstrated
+
+Technical Skills:
+
+Nmap
+Network Reconnaissance
+Port Scanning
+Service Enumeration
+Telnet
+Linux
+Command Line
+Authentication
+Post-exploitation
+
+Security Concepts:
+
+Attack Surface
+Initial Access
+Enemeration
+Remote Access
+Authentication
+Network Security
+
+https://labs.hackthebox.com/achievement/machine/3876756/394
