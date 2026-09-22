@@ -50,7 +50,7 @@ The alert required me to:
 
 The investigation followed a basic SOC alert-triage workflow:
 
-```text
+```
 Alert
   ↓
 Identify affected user
