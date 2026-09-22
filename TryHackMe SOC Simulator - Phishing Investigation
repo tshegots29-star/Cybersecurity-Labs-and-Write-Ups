@@ -1,0 +1,548 @@
+# TryHackMe SOC Simulator — Phishing Investigation
+
+## Introduction
+
+This write-up documents my investigation of a phishing-related alert from the **TryHackMe SOC Simulator — Introduction to Phishing** scenario.
+
+The investigation was performed using **Splunk** as the SIEM to analyze email and firewall telemetry. The objective was to determine whether an inbound email represented a genuine phishing attempt or legitimate business activity, establish whether the recipient interacted with the embedded URL, and determine whether escalation was required.
+
+> **Final Verdict:** False Positive
+> **Escalation:** Not Required
+> **Affected User:** Julia Garcia
+
+---
+
+## Investigation Objective
+
+The alert required me to:
+
+* Analyze the suspicious email.
+* Identify the sender, recipient, URL, and other indicators.
+* Determine whether the URL was accessed.
+* Correlate email activity with firewall logs.
+* Determine whether the activity represented malicious behavior.
+* Identify the affected endpoint.
+* Decide whether the alert was a True Positive or False Positive.
+* Determine whether escalation was required.
+* Document the investigation in a case report.
+
+---
+
+# Alert Information
+
+| Field         | Value                                               |
+| ------------- | --------------------------------------------------- |
+| Alert ID      | **8816**                                            |
+| Alert Type    | Phishing / Suspicious External URL                  |
+| Severity      | High                                                |
+| Affected User | Julia Garcia                                        |
+| Email         | `j.garcia@thetrydaily.thm`                          |
+| Hostname      | `win-3452`                                          |
+| Source IP     | `10.20.2.8`                                         |
+| Sender        | `onboarding@hrconnex.thm`                           |
+| Subject       | `Action Required: Finalize Your Onboarding Profile` |
+| Attachment    | None                                                |
+| Direction     | Inbound                                             |
+
+---
+
+# Investigation Methodology
+
+The investigation followed a basic SOC alert-triage workflow:
+
+```text
+Alert
+  ↓
+Identify affected user
+  ↓
+Analyze email
+  ↓
+Extract IOCs
+  ↓
+Search email logs
+  ↓
+Correlate with firewall logs
+  ↓
+Determine whether URL was accessed
+  ↓
+Look for evidence of compromise
+  ↓
+Classify Alert
+  ↓
+Determine Escalation
+  ↓
+Document Findings
+```
+
+---
+
+# 1️ Identify the Affected User
+
+The email was sent to:
+
+```
+j.garcia@thetrydaily.thm
+```
+
+Using the employee information provided by the scenario, I identified the associated endpoint as:
+
+```
+User:     Julia Garcia
+Hostname: win-3452
+IP:       10.20.2.8
+```
+
+This IP address was important because it allowed me to correlate the email event with firewall activity.
+
+---
+
+# 2️ Analyze the Email
+
+I searched the email data in Splunk for the recipient and suspicious domain.
+
+The relevant search was:
+
+```
+datasource=email "hrconnex.thm"
+```
+
+The search returned the following important events.
+
+### Email #1
+
+**Timestamp:**
+
+```
+09/05/2026 20:15:06.404
+```
+
+**Sender:**
+
+```
+onboarding@hrconnex.thm
+```
+
+**Recipient:**
+
+```
+j.garcia@thetrydaily.thm
+```
+
+**Subject:**
+
+```
+Action Required: Finalize Your Onboarding Profile
+```
+
+**Attachment:**
+
+```
+None
+```
+
+The email contained the following URL:
+
+```
+https://hrconnex.thm/onboarding/15400654060/j.garcia
+```
+
+The visible link text was:
+
+```
+Set Up My Profile
+```
+
+---
+
+# 3️ Identify the URL IOC
+
+The main indicator extracted from the email was:
+
+```
+https://hrconnex.thm/onboarding/15400654060/j.garcia
+```
+
+I recorded the following indicators:
+
+### Domain
+
+```
+hrconnex.thm
+```
+
+### Sender
+
+```
+onboarding@hrconnex.thm
+```
+
+### Unique URL identifier
+
+```
+15400654060
+```
+
+At this point, the URL was suspicious because it was an external onboarding link contained within an email that had triggered a phishing-related alert.
+
+However, the presence of an external URL alone does not prove that an email is malicious.
+
+---
+
+# 4️ Search for Additional Email Activity
+
+I searched Splunk for additional messages containing the onboarding keyword:
+
+```
+datasource=email "onboarding"
+```
+
+The search returned another important event.
+
+### Internal Email
+
+**Timestamp:**
+
+```
+09/05/2026 20:16:39.404
+```
+
+**Sender:**
+
+```
+h.harris@thetrydaily.thm
+```
+
+**Recipient:**
+
+```
+j.carter@thetrydaily.thm
+```
+
+**Subject:**
+
+```
+Unable to Receive Onboarding Email from hrconnex.thm
+```
+
+The message stated that:
+
+* J. Garcia was a new hire.
+* She was expected to receive an onboarding email.
+* `hrconnex.thm` was the company's **new third-party HR partner**.
+* The partner was responsible for account setup and paperwork.
+* Julia was expected to receive a link to complete her profile and sign documents.
+
+This was significant because it independently connected the `hrconnex.thm` domain to a legitimate business process.
+
+---
+
+# 5️ Check Whether the Email Was Received Again
+
+A second copy of the onboarding email appeared in the email logs.
+
+**Timestamp:**
+
+```
+09/05/2026 20:21:05.404
+```
+
+The sender, recipient, subject, and URL were the same as the earlier message.
+
+This demonstrated that Julia received the onboarding email twice.
+
+---
+
+# 6️ Correlate the Email With Firewall Logs
+
+The next step was to determine whether Julia actually clicked the URL.
+
+I searched the firewall logs using Julia's source IP:
+
+```
+datasource=firewall SourceIP="10.20.2.8"
+```
+
+Two relevant events were identified.
+
+---
+
+## Firewall Event #1
+
+**Timestamp:**
+
+```
+09/05/2026 20:19:10.404
+```
+
+**Source IP:**
+
+```
+10.20.2.8
+```
+
+**URL:**
+
+```
+https://intranet.thetrydaily.thm/hr/announcements
+```
+
+**Action:**
+
+```
+allowed
+```
+
+**Rule:**
+
+```
+Allow-Internet
+```
+
+This was an internal company HR announcements page and did not correspond to the suspicious URL.
+
+---
+
+## Firewall Event #2
+
+**Timestamp:**
+
+```
+09/05/2026 20:19:31.404
+```
+
+**Source IP:**
+
+```
+10.20.2.8
+```
+
+**URL:**
+
+```
+https://retaildive.com/news/hat-industry-analysis
+```
+
+**Action:**
+
+```
+allowed
+```
+
+**Rule:**
+
+```
+Allow-Internet
+```
+
+Again, this traffic was unrelated to the `hrconnex.thm` URL.
+
+---
+
+# 7️ Search Specifically for the Suspicious Domain
+
+To determine whether Julia accessed the domain, I performed a targeted search:
+
+```
+datasource=firewall SourceIP="10.20.2.8" "hrconnex.thm"
+```
+
+### Result
+
+```
+No results found
+```
+
+This meant there was no firewall event showing that Julia's workstation accessed `hrconnex.thm`.
+
+---
+
+# 8️ Search for the Unique URL Identifier
+
+I also searched for the unique identifier contained in the URL:
+
+```
+datasource=firewall "15400654060"
+```
+
+### Result
+
+```
+No results found
+```
+
+This provided additional evidence that the onboarding URL was not accessed.
+
+---
+
+# 9️ Search the Entire Firewall Dataset
+
+To ensure that the domain had not been accessed by another endpoint, I searched the entire firewall dataset:
+
+```
+datasource=firewall "hrconnex.thm"
+```
+
+### Result
+
+```
+No results found
+```
+
+I also searched for the unique URL identifier across all firewall events:
+
+```
+datasource=firewall "15400654060"
+```
+
+### Result
+
+```
+No results found
+```
+
+Therefore, the investigation found no firewall evidence showing access to the supplied onboarding URL.
+
+---
+
+# 10 Timeline
+
+| Time              | Event                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| **20:15:06**      | Julia receives onboarding email from `onboarding@hrconnex.thm`                              |
+| **20:16:39**      | Hannah sends an internal email identifying `hrconnex.thm` as the new third-party HR partner |
+| **20:19:10**      | Julia accesses internal HR announcements                                                    |
+| **20:19:31**      | Julia accesses RetailDive                                                                   |
+| **20:21:05**      | Julia receives the onboarding email again                                                   |
+| **Investigation** | No firewall evidence of access to `hrconnex.thm`                                            |
+| **Investigation** | No firewall evidence containing URL identifier `15400654060`                                |
+
+---
+
+# Indicators of Interest
+
+| Indicator  | Value                                                  | Finding                               |
+| ---------- | ------------------------------------------------------ | ------------------------------------- |
+| Sender     | `onboarding@hrconnex.thm`                              | Appears legitimate                    |
+| Domain     | `hrconnex.thm`                                         | Identified internally as HR partner   |
+| URL        | `https://hrconnex.thm/onboarding/15400654060/j.garcia` | No firewall access found              |
+| URL ID     | `15400654060`                                          | No firewall match                     |
+| Recipient  | `j.garcia@thetrydaily.thm`                             | Julia Garcia                          |
+| Source IP  | `10.20.2.8`                                            | Julia's workstation                   |
+| Hostname   | `win-3452`                                             | Julia's endpoint                      |
+| Attachment | None                                                   | No attachment-based threat identified |
+
+---
+
+# Alert Classification
+
+## False Positive
+
+The alert was classified as a **False Positive**.
+
+### Reasoning
+
+The investigation found multiple pieces of evidence supporting legitimate activity:
+
+1. The email was related to employee onboarding.
+2. An internal employee independently identified `hrconnex.thm` as the organization's new third-party HR partner.
+3. The email did not contain an attachment.
+4. No firewall activity showed Julia accessing the `hrconnex.thm` domain.
+5. No firewall activity contained the unique URL identifier.
+6. There was no evidence of malware delivery, credential theft, unauthorized access, or endpoint compromise.
+
+The alert appears to have been triggered by the presence of an external URL in the inbound email rather than by confirmed malicious activity.
+
+---
+
+# Escalation Decision
+
+## No Escalation Required
+
+The investigation did not identify:
+
+* Successful phishing
+* Credential theft
+* Malware execution
+* Unauthorized access
+* Malicious URL access
+* Endpoint compromise
+* A broader attack chain
+
+Therefore, escalation was not required.
+
+---
+
+# Final Case Assessment
+
+The investigated email initially appeared suspicious because it requested that an employee complete onboarding through an external URL.
+
+However, correlation with internal email communications showed that `hrconnex.thm` was associated with the organization's new third-party HR onboarding process.
+
+Firewall investigation found no evidence that Julia's workstation accessed the supplied URL or domain.
+
+Based on the available email and firewall telemetry, the alert was determined to be a **False Positive** and was closed without escalation.
+
+---
+
+# Key Lessons Learned
+
+This investigation reinforced several important SOC analyst concepts:
+
+### 1. An alert is not automatically an incident
+
+A phishing alert requires investigation and validation before classification.
+
+### 2. Context is critical
+
+The internal email from Hannah provided important business context that helped establish the legitimacy of the external domain.
+
+### 3. Correlation is essential
+
+Email logs alone could not establish whether Julia interacted with the URL. Correlating the email event with firewall telemetry provided additional evidence.
+
+### 4. Search for the affected endpoint
+
+Identifying Julia's IP address (`10.20.2.8`) allowed the investigation to focus on the correct workstation.
+
+### 5. Absence of evidence can be important
+
+The lack of firewall connections to `hrconnex.thm` and the unique URL identifier provided evidence that the link was not accessed.
+
+### 6. Avoid confusing separate incidents
+
+During the investigation, another firewall event involving a Bitly URL and IP `67.199.248.11` was identified. That activity originated from `10.20.2.17`, which belongs to **Hannah Harris**, not Julia Garcia.
+
+It was therefore treated as a separate investigation rather than being incorrectly associated with this alert.
+
+---
+
+# Tools Used
+
+* **TryHackMe SOC Simulator**
+* **Splunk**
+* Email log analysis
+* Firewall log analysis
+* IOC extraction
+* Event correlation
+* Timeline analysis
+* Alert triage and classification
+
+---
+
+# Conclusion
+
+This investigation demonstrated a practical SOC workflow for handling a suspected phishing alert.
+
+The investigation began with a suspicious external onboarding link and progressed through email analysis, IOC extraction, endpoint identification, firewall correlation, and contextual validation.
+
+The final determination was:
+
+```
+Classification: False Positive
+Escalation: No
+Affected User: Julia Garcia
+Endpoint: win-3452
+IP: 10.20.2.8
+```
+
+The key takeaway is that effective SOC analysis requires **correlating multiple data sources and validating the context of an alert before deciding whether an event is genuinely malicious.**
