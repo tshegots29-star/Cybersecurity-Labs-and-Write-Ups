@@ -76,7 +76,7 @@ Document Findings
 
 ---
 
-# 1️ Identify the Affected User
+# 1 Identify the Affected User
 
 The email was sent to:
 
@@ -96,7 +96,7 @@ This IP address was important because it allowed me to correlate the email event
 
 ---
 
-# 2️ Analyze the Email
+# 2 Analyze the Email
 
 I searched the email data in Splunk for the recipient and suspicious domain.
 
@@ -154,7 +154,7 @@ Set Up My Profile
 
 ---
 
-# 3️ Identify the URL IOC
+# 3 Identify the URL IOC
 
 The main indicator extracted from the email was:
 
@@ -188,7 +188,7 @@ However, the presence of an external URL alone does not prove that an email is m
 
 ---
 
-# 4️ Search for Additional Email Activity
+# 4 Search for Additional Email Activity
 
 I searched Splunk for additional messages containing the onboarding keyword:
 
@@ -236,7 +236,7 @@ This was significant because it independently connected the `hrconnex.thm` domai
 
 ---
 
-# 5️ Check Whether the Email Was Received Again
+# 5 Check Whether the Email Was Received Again
 
 A second copy of the onboarding email appeared in the email logs.
 
@@ -252,7 +252,7 @@ This demonstrated that Julia received the onboarding email twice.
 
 ---
 
-# 6️ Correlate the Email With Firewall Logs
+# 6 Correlate the Email With Firewall Logs
 
 The next step was to determine whether Julia actually clicked the URL.
 
@@ -338,7 +338,7 @@ Again, this traffic was unrelated to the `hrconnex.thm` URL.
 
 ---
 
-# 7️ Search Specifically for the Suspicious Domain
+# 7 Search Specifically for the Suspicious Domain
 
 To determine whether Julia accessed the domain, I performed a targeted search:
 
@@ -356,7 +356,7 @@ This meant there was no firewall event showing that Julia's workstation accessed
 
 ---
 
-# 8️ Search for the Unique URL Identifier
+# 8 Search for the Unique URL Identifier
 
 I also searched for the unique identifier contained in the URL:
 
@@ -374,7 +374,7 @@ This provided additional evidence that the onboarding URL was not accessed.
 
 ---
 
-# 9️ Search the Entire Firewall Dataset
+# 9 Search the Entire Firewall Dataset
 
 To ensure that the domain had not been accessed by another endpoint, I searched the entire firewall dataset:
 
